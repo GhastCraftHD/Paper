@@ -4,6 +4,7 @@ Date: Mon, 27 Feb 2023 18:28:39 -0800
 Subject: [PATCH] Registry Modification API
 
 == AT ==
+public net.minecraft.server.RegistryLayer STATIC_ACCESS
 public net.minecraft.core.MappedRegistry validateWrite(Lnet/minecraft/resources/ResourceKey;)V
 
 diff --git a/src/main/java/io/papermc/paper/registry/PaperRegistries.java b/src/main/java/io/papermc/paper/registry/PaperRegistries.java
@@ -69,7 +70,7 @@ index 0000000000000000000000000000000000000000..4cf32102a134ebef67d3893cfd24bf0a
 +}
 diff --git a/src/main/java/io/papermc/paper/registry/PaperRegistryListenerManager.java b/src/main/java/io/papermc/paper/registry/PaperRegistryListenerManager.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..e2605a9324b9dc91cd910e4bb974d5a911b58b1f
+index 0000000000000000000000000000000000000000..6b3ba059b4f530b9e3d1c3d6bbc033e96c6a9bc2
 --- /dev/null
 +++ b/src/main/java/io/papermc/paper/registry/PaperRegistryListenerManager.java
 @@ -0,0 +1,167 @@
@@ -116,7 +117,7 @@ index 0000000000000000000000000000000000000000..e2605a9324b9dc91cd910e4bb974d5a9
 +     * For {@link Registry#register(Registry, String, Object)}
 +     */
 +    public <M> M registerWithListeners(final Registry<M> registry, final String id, final M nms) {
-+        return this.registerWithListeners(registry, ResourceLocation.withDefaultNamespace(id), nms);
++        return this.registerWithListeners(registry, new ResourceLocation(id), nms);
 +    }
 +
 +    /**
@@ -804,7 +805,7 @@ index 44b7927081b476813505cab6b3a2da2ec2942c54..c96bcd815ec9bf76625b5bedef461da4
          }
      }
 diff --git a/src/main/java/net/minecraft/resources/RegistryDataLoader.java b/src/main/java/net/minecraft/resources/RegistryDataLoader.java
-index abadf4abe08dc3bb6612b42cbb3f7df3ffa28ce9..56d8dcf2f3fd042ed1e7ed01a0ce5d90c89ee502 100644
+index abadf4abe08dc3bb6612b42cbb3f7df3ffa28ce9..ce65f2ea462b920e5e14b8cb687ef371c311d242 100644
 --- a/src/main/java/net/minecraft/resources/RegistryDataLoader.java
 +++ b/src/main/java/net/minecraft/resources/RegistryDataLoader.java
 @@ -136,6 +136,7 @@ public class RegistryDataLoader {
@@ -820,23 +821,10 @@ index abadf4abe08dc3bb6612b42cbb3f7df3ffa28ce9..56d8dcf2f3fd042ed1e7ed01a0ce5d90
              DataResult<E> dataResult = decoder.parse(ops, jsonElement);
              E object = dataResult.getOrThrow();
 -            registry.register(key, object, entryInfo);
-+            io.papermc.paper.registry.PaperRegistryListenerManager.INSTANCE.registerWithListeners(registry, key, object, entryInfo); // Paper - register with listeners
++            io.papermc.paper.registry.PaperRegistryListenerManager.INSTANCE.registerWithListeners(registry, key, object, entryInfo); // Paper
          }
      }
  
-diff --git a/src/main/java/net/minecraft/server/ReloadableServerRegistries.java b/src/main/java/net/minecraft/server/ReloadableServerRegistries.java
-index 397bdacab9517354875ebc0bc68d35059b3c318b..705fe42b52414fbac14ec107fda5ad0989a5a115 100644
---- a/src/main/java/net/minecraft/server/ReloadableServerRegistries.java
-+++ b/src/main/java/net/minecraft/server/ReloadableServerRegistries.java
-@@ -66,7 +66,7 @@ public class ReloadableServerRegistries {
-                 SimpleJsonResourceReloadListener.scanDirectory(resourceManager, string, GSON, map);
-                 map.forEach(
-                     (id, json) -> type.deserialize(id, ops, json)
--                            .ifPresent(value -> writableRegistry.register(ResourceKey.create(type.registryKey(), id), (T)value, DEFAULT_REGISTRATION_INFO))
-+                            .ifPresent(value -> io.papermc.paper.registry.PaperRegistryListenerManager.INSTANCE.registerWithListeners(writableRegistry, ResourceKey.create(type.registryKey(), id), value, DEFAULT_REGISTRATION_INFO)) // Paper - register with listeners
-                 );
-                 return writableRegistry;
-             },
 diff --git a/src/main/java/org/bukkit/craftbukkit/CraftRegistry.java b/src/main/java/org/bukkit/craftbukkit/CraftRegistry.java
 index d21b7e39d71c785f47f790e1ad4be33a8e8e6e51..43d686a9958cff96f5b15d93e920c8f2313aa65b 100644
 --- a/src/main/java/org/bukkit/craftbukkit/CraftRegistry.java
