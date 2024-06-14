@@ -6,20 +6,26 @@ Subject: [PATCH] Introduce registry entry and builders
 
 diff --git a/src/main/java/io/papermc/paper/registry/data/EnchantmentRegistryEntry.java b/src/main/java/io/papermc/paper/registry/data/EnchantmentRegistryEntry.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..34710ab006e7439392df1afe017fde6141a93bd7
+index 0000000000000000000000000000000000000000..5b63b95dcb24f14404476d6f240d18b591316ea1
 --- /dev/null
 +++ b/src/main/java/io/papermc/paper/registry/data/EnchantmentRegistryEntry.java
-@@ -0,0 +1,125 @@
+@@ -0,0 +1,285 @@
 +package io.papermc.paper.registry.data;
 +
 +import io.papermc.paper.registry.RegistryBuilder;
 +import io.papermc.paper.registry.set.RegistrySet;
++import java.util.List;
++import io.papermc.paper.registry.tag.TagKey;
 +import net.kyori.adventure.text.Component;
 +import org.bukkit.enchantments.Enchantment;
++import org.bukkit.inventory.EquipmentSlotGroup;
 +import org.bukkit.inventory.ItemType;
 +import org.checkerframework.checker.nullness.qual.NonNull;
++import org.checkerframework.checker.nullness.qual.Nullable;
 +import org.jetbrains.annotations.Contract;
++import org.jetbrains.annotations.NotNull;
 +import org.jetbrains.annotations.Range;
++import org.jetbrains.annotations.Unmodifiable;
 +
 +/**
 + * A data-centric version-specific registry entry for the {@link Enchantment} type.
@@ -36,12 +42,21 @@ index 0000000000000000000000000000000000000000..34710ab006e7439392df1afe017fde61
 +    Component description();
 +
 +    /**
-+     * Provides a set of item types this enchantment is supported on.
++     * Provides the tag key representing the items this enchantment is supported on.
 +     *
-+     * @return a registry set holding item types.
++     * @return the tag key.
 +     */
 +    @NonNull
-+    RegistrySet<ItemType> supportedItems();
++    TagKey<ItemType> supportedItems();
++
++    /**
++     * Provides the tag key representing the item types this enchantment can naturally be applied to when enchanting in
++     * an enchantment table.
++     *
++     * @return the tag key.
++     */
++    @Nullable
++    TagKey<ItemType> primaryItems();
 +
 +    /**
 +     * Provides the weight of this enchantment used by the weighted random when selecting enchantments.
@@ -60,6 +75,22 @@ index 0000000000000000000000000000000000000000..34710ab006e7439392df1afe017fde61
 +    int maxLevel();
 +
 +    /**
++     * Provides the minimum cost to enchant an item with this enchantment.
++     *
++     * @return the enchantment cost.
++     */
++    @NonNull
++    EnchantmentCost minimumCost();
++
++    /**
++     * Provides the maximum cost to enchant an item with this enchantment.
++     *
++     * @return the enchantment cost.
++     */
++    @NonNull
++    EnchantmentCost maximumCost();
++
++    /**
 +     * Gets cost of applying this enchantment using an anvil.
 +     * <p>
 +     * Note that this is halved when using an enchantment book, and is multiplied by the level of the enchantment.
@@ -72,12 +103,151 @@ index 0000000000000000000000000000000000000000..34710ab006e7439392df1afe017fde61
 +    int anvilCost();
 +
 +    /**
-+     * The enchant cost interface represents the cost of applying an enchantment, split up into its different components.
++     * Provides a list of slot groups this enchantment may be active in.
++     * If the item enchanted with this enchantment is equipped in a slot not covered by the returned list and its groups,
++     * the enchantments effects, like attribute modiifers, will not activate.
++     *
++     * @return a list of equipment slot groups.
++     * @see Enchantment#getActiveSlots()
 +     */
-+    interface EnchantCost {
++    @NonNull
++    @Unmodifiable
++    List<EquipmentSlotGroup> activeSlots();
++
++    /**
++     * Provides the registry set of enchantments that this enchantment is exclusive with.
++     * This enchantment may not be applied on items that are already enchanted with enchantments found in the returned
++     * set.
++     *
++     * @return a registry set of enchantments exclusive to this one.
++     */
++    @NonNull
++    RegistrySet<Enchantment> exclusiveWith();
++
++    /**
++     * A mutable builder for the {@link GameEventRegistryEntry} plugins may change in applicable registry events.
++     */
++    interface Builder extends EnchantmentRegistryEntry, RegistryBuilder<Enchantment> {
 +
 +        /**
-+         * Returns the base cost of this enchant cost, no matter what level the enchantment has.
++         * Configures the description of the enchantment registry entry that is to be displayed to the client.
++         *
++         * @param description the description component.
++         * @return this builder.
++         */
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull
++        Builder description(@NonNull Component description);
++
++        /**
++         * Configures the set of supported items this enchantment can be applied on.
++         *
++         * @param supportedItems the tag key representing the supported items.
++         * @return this builder.
++         */
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull
++        Builder supportedItems(@NonNull TagKey<ItemType> supportedItems);
++
++        /**
++         * Configures a set of item types this enchantment can naturally be applied to, when enchanting in an
++         * enchantment table.
++         *
++         * @param primaryItems the tag key representing the primary items.
++         * @return this builder.
++         */
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull
++        Builder primaryItems(@Nullable TagKey<ItemType> primaryItems);
++
++        /**
++         * Configures the weight of this enchantment used by the weighted random when selecting enchantments.
++         *
++         * @param weight the weight value.
++         * @return this builder.
++         */
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull
++        Builder weight(@Range(from = 1, to = 1024) int weight);
++
++        /**
++         * Configures the maximum level this enchantment can have when applied.
++         *
++         * @param maxLevel the maximum level.
++         * @return this builder.
++         */
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull
++        Builder maxLevel(@Range(from = 1, to = 255) int maxLevel);
++
++        /**
++         * Configures the minimum cost to enchant an item with this enchantment.
++         *
++         * @param minimumCost the enchantment cost.
++         * @return this builder.
++         */
++        @NonNull
++        @Contract(value = "_ -> this", mutates = "this")
++        Builder minimumCost(@NotNull EnchantmentCost minimumCost);
++
++        /**
++         * Configures the maximum cost to enchant an item with this enchantment.
++         *
++         * @param maximumCost a the enchantment cost.
++         * @return this builder.
++         */
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull
++        Builder maximumCost(@NotNull EnchantmentCost maximumCost);
++
++        /**
++         * Configures the cost of applying this enchantment using an anvil.
++         * <p>
++         * Note that this is halved when using an enchantment book, and is multiplied by the level of the enchantment.
++         * See <a href="https://minecraft.wiki/w/Anvil_mechanics">https://minecraft.wiki/w/Anvil_mechanics</a> for more information.
++         * </p>
++         *
++         * @param anvilCost The anvil cost of this enchantment
++         * @return this builder.
++         */
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull
++        Builder anvilCost(@Range(from = 0, to = Integer.MAX_VALUE) int anvilCost);
++
++        /**
++         * Configures the list of slot groups this enchantment may be active in.
++         * <p>
++         * If the item enchanted with this enchantment is equipped in a slot not covered by the returned list and its groups,
++         * the enchantment's effects, like attribute modiifers, will not activate.
++         *
++         * @param activeSlots a list of equipment slot groups.
++         * @return this builder.
++         * @see Enchantment#getActiveSlots()
++         */
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull
++        Builder activeSlots(@NonNull List<@NonNull EquipmentSlotGroup> activeSlots);
++
++        /**
++         * Configures the registry set of enchantments that this enchantment is exclusive with.
++         * <p>
++         * This enchantment may not be applied on items that are already enchanted with enchantments found in the returned
++         * set.
++         *
++         * @param exclusiveWith a registry set of enchantments exclusive to this one.
++         * @return this builder.
++         */
++        @Contract(value = "_ -> this", mutates = "this")
++        @NonNull
++        Builder exclusiveWith(@NonNull RegistrySet<Enchantment> exclusiveWith);
++    }
++
++    /**
++     * The enchantment cost interface represents the cost of applying an enchantment, split up into its different components.
++     */
++    interface EnchantmentCost {
++        /**
++         * Returns the base cost of this enchantment cost, no matter what level the enchantment has.
 +         *
 +         * @return the cost in levels.
 +         */
@@ -92,49 +262,39 @@ index 0000000000000000000000000000000000000000..34710ab006e7439392df1afe017fde61
 +        int additionalPerLevelCost();
 +
 +        /**
-+         * Creates a new enchant cost instance based on the passed values.
++         * Creates a new enchantment cost instance based on the passed values.
 +         *
-+         * @param baseCost               the base cost of the enchant cost as returned by {@link #baseCost()}
++         * @param baseCost               the base cost of the enchantment cost as returned by {@link #baseCost()}
 +         * @param additionalPerLevelCost the additional cost per level, as returned by {@link #additionalPerLevelCost()}
 +         * @return the created instance.
 +         */
 +        @Contract(pure = true)
-+        static EnchantCost of(final int baseCost, final int additionalPerLevelCost) {
-+            record Impl(int baseCost, int additionalPerLevelCost) implements EnchantCost {
++        static EnchantmentCost of(final int baseCost, final int additionalPerLevelCost) {
++            record Impl(int baseCost, int additionalPerLevelCost) implements EnchantmentCost {
 +            }
 +
 +            return new Impl(baseCost, additionalPerLevelCost);
 +        }
-+
-+    }
-+
-+    /**
-+     * A mutable builder for the {@link GameEventRegistryEntry} plugins may change in applicable registry events.
-+     */
-+    interface Builder extends EnchantmentRegistryEntry, RegistryBuilder<Enchantment> {
-+
-+        /**
-+         * Sets the description of the enchantment registry entry that is to be displayed to the client.
-+         *
-+         * @param description the description component.
-+         * @return this builder.
-+         */
-+        @Contract(value = "_ -> this", mutates = "this")
-+        @NonNull
-+        Builder description(@NonNull Component description);
-+
-+        /**
-+         * Sets the set of supported items this enchantment can be applied on.
-+         *
-+         * @param supportedItems the registry set of items.
-+         * @return this builder.
-+         */
-+        @Contract(value = "_ -> this", mutates = "this")
-+        @NonNull
-+        Builder supportedItems(@NonNull RegistrySet<ItemType> supportedItems);
 +    }
 +
 +}
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
 diff --git a/src/main/java/io/papermc/paper/registry/data/GameEventRegistryEntry.java b/src/main/java/io/papermc/paper/registry/data/GameEventRegistryEntry.java
 new file mode 100644
 index 0000000000000000000000000000000000000000..416425bf062dd7d4a202dd53838a8c952d0b40c0

@@ -29,20 +29,31 @@ index 9342f034ef590594db046cd9b0810bd4075d8e6b..91f4e3b3172dcef1c4093e924405e88a
              entry(Registries.STRUCTURE_TYPE, RegistryKey.STRUCTURE_TYPE, StructureType.class, CraftStructureType::new),
 diff --git a/src/main/java/io/papermc/paper/registry/data/PaperEnchantmentRegistryEntryBuilder.java b/src/main/java/io/papermc/paper/registry/data/PaperEnchantmentRegistryEntryBuilder.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..37f6f3c74dc1e001621ddbde5bde73d1f1a86d2d
+index 0000000000000000000000000000000000000000..2df96bb39ef75c74529186d96458631908e51804
 --- /dev/null
 +++ b/src/main/java/io/papermc/paper/registry/data/PaperEnchantmentRegistryEntryBuilder.java
-@@ -0,0 +1,53 @@
+@@ -0,0 +1,178 @@
 +package io.papermc.paper.registry.data;
 +
 +import io.papermc.paper.registry.PaperRegistryBuilder;
++import io.papermc.paper.registry.RegistryAccess;
++import io.papermc.paper.registry.RegistryKey;
 +import io.papermc.paper.registry.TypedKey;
++import io.papermc.paper.registry.set.PaperRegistrySets;
 +import io.papermc.paper.registry.set.RegistrySet;
++import java.util.Collections;
++import java.util.List;
++import io.papermc.paper.registry.tag.TagKey;
++import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 +import net.kyori.adventure.text.Component;
 +import net.minecraft.world.item.enchantment.Enchantment;
++import org.bukkit.craftbukkit.CraftRegistry;
++import org.bukkit.inventory.EquipmentSlotGroup;
 +import org.bukkit.inventory.ItemType;
 +import org.checkerframework.checker.nullness.qual.NonNull;
 +import org.checkerframework.checker.nullness.qual.Nullable;
++import org.jetbrains.annotations.NotNull;
++import org.jetbrains.annotations.Range;
 +
 +public class PaperEnchantmentRegistryEntryBuilder implements EnchantmentRegistryEntry.Builder,
 +    PaperRegistryBuilder<Enchantment, org.bukkit.enchantments.Enchantment> {
@@ -51,17 +62,88 @@ index 0000000000000000000000000000000000000000..37f6f3c74dc1e001621ddbde5bde73d1
 +    private Component description;
 +
 +    // Definition
-+    private RegistrySet<ItemType> supportedItems;
++    private TagKey<ItemType> supportedItems;
++    private @Nullable TagKey<ItemType> primaryItems;
++    private int weight;
++    private int maxLevel;
++    private EnchantmentRegistryEntry.@NonNull EnchantmentCost minimumCost;
++    private EnchantmentRegistryEntry.@NonNull EnchantmentCost maximumCost;
++    private int anvilCost;
++    private List<EquipmentSlotGroup> activeSlots;
 +
-+    public PaperEnchantmentRegistryEntryBuilder(@NonNull TypedKey<org.bukkit.enchantments.Enchantment> $, @Nullable Enchantment internal) {
-+        if (internal == null) return;
++    // Exclusive
++    private RegistrySet<org.bukkit.enchantments.Enchantment> exclusiveWith;
++
++    public PaperEnchantmentRegistryEntryBuilder(
++        @NonNull TypedKey<org.bukkit.enchantments.Enchantment> $,
++        @Nullable Enchantment internal
++    ) {
++        if (internal == null) {
++            this.description = Component.empty();
++            this.supportedItems =
++            this.weight = 0;
++            this.maxLevel = 0;
++            this.minimumCost = EnchantmentCost.of(0, 0);
++            this.maximumCost = EnchantmentCost.of(0, 0);
++            this.anvilCost = 0;
++            this.activeSlots = Collections.emptyList();
++            return;
++        }
++
++        final Enchantment.EnchantmentDefinition definition = internal.definition;
 +
 +        this.description = Component.translatable(internal.getDescriptionId());
++        this.supportedItems = PaperRegistrySets.convertToApi(definition.supportedItems())
 +    }
 +
 +    @Override
 +    public @NonNull Component description() {
 +        return this.description;
++    }
++
++    @Override
++    public @NonNull TagKey<ItemType> supportedItems() {
++        return this.supportedItems;
++    }
++
++    @Override
++    public @Nullable TagKey<ItemType> primaryItems() {
++        return this.primaryItems;
++    }
++
++    @Override
++    public @Range(from = 1, to = 1024) int weight() {
++        return this.weight;
++    }
++
++    @Override
++    public @Range(from = 1, to = 255) int maxLevel() {
++        return this.maxLevel;
++    }
++
++    @Override
++    public @NonNull EnchantmentCost minimumCost() {
++        return this.minimumCost;
++    }
++
++    @Override
++    public @NonNull EnchantmentCost maximumCost() {
++        return this.maximumCost;
++    }
++
++    @Override
++    public @Range(from = 0, to = Integer.MAX_VALUE) int anvilCost() {
++        return this.anvilCost;
++    }
++
++    @Override
++    public @NonNull List<EquipmentSlotGroup> activeSlots() {
++        return Collections.unmodifiableList(this.activeSlots);
++    }
++
++    @Override
++    public @NonNull RegistrySet<org.bukkit.enchantments.Enchantment> exclusiveWith() {
++        return this.exclusiveWith;
 +    }
 +
 +    @Override
@@ -71,13 +153,56 @@ index 0000000000000000000000000000000000000000..37f6f3c74dc1e001621ddbde5bde73d1
 +    }
 +
 +    @Override
-+    public @NonNull RegistrySet<ItemType> supportedItems() {
-+        return this.supportedItems;
++    public @NonNull Builder supportedItems(@NonNull final TagKey<ItemType> supportedItems) {
++        this.supportedItems = supportedItems;
++        return this;
 +    }
 +
 +    @Override
-+    public @NonNull Builder supportedItems(@NonNull final RegistrySet<ItemType> supportedItems) {
-+        this.supportedItems = supportedItems;
++    public @NonNull Builder primaryItems(@Nullable final TagKey<ItemType> primaryItems) {
++        this.primaryItems = primaryItems;
++        return this;
++    }
++
++    @Override
++    public @NonNull Builder weight(@Range(from = 1, to = 1024) final int weight) {
++        this.weight = weight;
++        return this;
++    }
++
++    @Override
++    public @NonNull Builder maxLevel(@Range(from = 1, to = 255) final int maxLevel) {
++        this.maxLevel = maxLevel;
++        return this;
++    }
++
++    @Override
++    public @NonNull Builder minimumCost(@NotNull final EnchantmentCost minimumCost) {
++        this.minimumCost = minimumCost;
++        return this;
++    }
++
++    @Override
++    public @NonNull Builder maximumCost(@NotNull final EnchantmentCost maximumCost) {
++        this.maximumCost = maximumCost;
++        return this;
++    }
++
++    @Override
++    public @NonNull Builder anvilCost(@Range(from = 0, to = Integer.MAX_VALUE) final int anvilCost) {
++        this.anvilCost = anvilCost;
++        return this;
++    }
++
++    @Override
++    public @NonNull Builder activeSlots(@NonNull final List<@NonNull EquipmentSlotGroup> activeSlots) {
++        this.activeSlots = new ObjectArrayList<>(activeSlots);
++        return this;
++    }
++
++    @Override
++    public @NonNull Builder exclusiveWith(@NonNull final RegistrySet<org.bukkit.enchantments.Enchantment> exclusiveWith) {
++        this.exclusiveWith = exclusiveWith;
 +        return this;
 +    }
 +
