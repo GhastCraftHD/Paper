@@ -6,16 +6,16 @@ Subject: [PATCH] Introduce registry entry and builders
 
 diff --git a/src/main/java/io/papermc/paper/registry/data/EnchantmentRegistryEntry.java b/src/main/java/io/papermc/paper/registry/data/EnchantmentRegistryEntry.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..5b63b95dcb24f14404476d6f240d18b591316ea1
+index 0000000000000000000000000000000000000000..c6fec399e5f5320e62b775259402c2a5663b4781
 --- /dev/null
 +++ b/src/main/java/io/papermc/paper/registry/data/EnchantmentRegistryEntry.java
-@@ -0,0 +1,285 @@
+@@ -0,0 +1,268 @@
 +package io.papermc.paper.registry.data;
 +
 +import io.papermc.paper.registry.RegistryBuilder;
 +import io.papermc.paper.registry.set.RegistrySet;
-+import java.util.List;
 +import io.papermc.paper.registry.tag.TagKey;
++import java.util.List;
 +import net.kyori.adventure.text.Component;
 +import org.bukkit.enchantments.Enchantment;
 +import org.bukkit.inventory.EquipmentSlotGroup;
@@ -278,23 +278,6 @@ index 0000000000000000000000000000000000000000..5b63b95dcb24f14404476d6f240d18b5
 +    }
 +
 +}
-+
-+
-+
-+
-+
-+
-+
-+
-+
-+
-+
-+
-+
-+
-+
-+
-+
 diff --git a/src/main/java/io/papermc/paper/registry/data/GameEventRegistryEntry.java b/src/main/java/io/papermc/paper/registry/data/GameEventRegistryEntry.java
 new file mode 100644
 index 0000000000000000000000000000000000000000..416425bf062dd7d4a202dd53838a8c952d0b40c0
