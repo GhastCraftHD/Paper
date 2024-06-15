@@ -5,10 +5,10 @@ Subject: [PATCH] Proxy ItemStack to CraftItemStack
 
 
 diff --git a/src/main/java/org/bukkit/craftbukkit/inventory/CraftItemStack.java b/src/main/java/org/bukkit/craftbukkit/inventory/CraftItemStack.java
-index f1e1953f2dc65dc615b7b7b648c37b195d3b4c25..3496b98ff0b984dbfec4f0983459a273dc0e3471 100644
+index 42549c7e5c803e0fdcc0243e847d5d17c0aae18a..dd0840b26c69f9aa0cccf57175c2352315d39411 100644
 --- a/src/main/java/org/bukkit/craftbukkit/inventory/CraftItemStack.java
 +++ b/src/main/java/org/bukkit/craftbukkit/inventory/CraftItemStack.java
-@@ -22,6 +22,20 @@ import org.bukkit.material.MaterialData;
+@@ -25,6 +25,20 @@ import org.bukkit.material.MaterialData;
  @DelegateDeserialization(ItemStack.class)
  public final class CraftItemStack extends ItemStack {
  
@@ -29,7 +29,7 @@ index f1e1953f2dc65dc615b7b7b648c37b195d3b4c25..3496b98ff0b984dbfec4f0983459a273
      // Paper start - MC Utils
      public static net.minecraft.world.item.ItemStack unwrap(ItemStack bukkit) {
          if (bukkit instanceof CraftItemStack craftItemStack) {
-@@ -44,25 +58,15 @@ public final class CraftItemStack extends ItemStack {
+@@ -47,25 +61,15 @@ public final class CraftItemStack extends ItemStack {
      // Paper end - override isEmpty to use vanilla's impl
  
      public static net.minecraft.world.item.ItemStack asNMSCopy(ItemStack original) {
@@ -41,7 +41,7 @@ index f1e1953f2dc65dc615b7b7b648c37b195d3b4c25..3496b98ff0b984dbfec4f0983459a273
 -            return net.minecraft.world.item.ItemStack.EMPTY;
 -        }
 -
--        Item item = CraftMagicNumbers.getItem(original.getType(), original.getDurability());
+-        Item item = CraftItemType.bukkitToMinecraft(original.getType());
 -
 -        if (item == null) {
 -            return net.minecraft.world.item.ItemStack.EMPTY;
@@ -63,7 +63,7 @@ index f1e1953f2dc65dc615b7b7b648c37b195d3b4c25..3496b98ff0b984dbfec4f0983459a273
      }
  
      // Paper start
-@@ -302,11 +306,7 @@ public final class CraftItemStack extends ItemStack {
+@@ -313,11 +317,7 @@ public final class CraftItemStack extends ItemStack {
  
      @Override
      public CraftItemStack clone() {
@@ -77,7 +77,7 @@ index f1e1953f2dc65dc615b7b7b648c37b195d3b4c25..3496b98ff0b984dbfec4f0983459a273
  
      @Override
 diff --git a/src/main/java/org/bukkit/craftbukkit/inventory/CraftItemType.java b/src/main/java/org/bukkit/craftbukkit/inventory/CraftItemType.java
-index 6bcc3192097dfbf378592fd2437a80dcd0825f13..b54be1122af2b303c0f063ff6b61bf8e2478b0df 100644
+index c0ef1c99fa384fa4f898ef020ec16060a7675e84..37d52cf22a812f09ea2bee73de09143c08832e37 100644
 --- a/src/main/java/org/bukkit/craftbukkit/inventory/CraftItemType.java
 +++ b/src/main/java/org/bukkit/craftbukkit/inventory/CraftItemType.java
 @@ -64,7 +64,7 @@ public class CraftItemType<M extends ItemMeta> implements ItemType.Typed<M>, Han

@@ -233,7 +233,7 @@ index 0000000000000000000000000000000000000000..9789916f949374bfb50da535b0761807
 +    @NonNull PersistentDataContainerView getPersistentDataContainer();
 +}
 diff --git a/src/main/java/org/bukkit/inventory/ItemStack.java b/src/main/java/org/bukkit/inventory/ItemStack.java
-index 15a59a27f0854ff6f4038349d3a0d00347130140..a705d01d35534900b5ae295b5ee5f781c727a53e 100644
+index 551f57de41f6d8cf9839619101933b4a2b7011ca..bc1ca14b21121503fa928513917c6a75f31be1b9 100644
 --- a/src/main/java/org/bukkit/inventory/ItemStack.java
 +++ b/src/main/java/org/bukkit/inventory/ItemStack.java
 @@ -27,7 +27,7 @@ import org.jetbrains.annotations.Nullable;
